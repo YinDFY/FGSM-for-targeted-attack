@@ -1,4 +1,4 @@
-# FGSM
+# FGSM for targeted attack 
 FGSM for targeted attack.
 
 Loss function: cosine similarity
