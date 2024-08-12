@@ -60,23 +60,26 @@ def cal_target_loss(before_pasted, target_img, model_name):
     cos_loss =  cos_simi(emb_before_pasted, emb_target_img)
     return cos_loss
 
-def FGSM_Attack(img_before, target, model_names, alpha=2/255, iters=1):
+def FGSM_Attack(img_before, target, model_names, eps=0.025):
     img_adv = img_before.clone().detach().requires_grad_(True)
-    total_loss = 0
-    for i in range(iters):
-        # Zero out the gradients
-        img_adv.requires_grad = True
-        # Calculate losses for each model
-        total_loss = 0
-        for model_name in model_names:
-            cos_loss = cal_target_loss(img_adv, target, model_name)
-            total_loss += cos_loss
-        # Backward and gradient calculation
-        total_loss.backward()
-        # Update the image
-        adv_images = img_adv + alpha * img_adv.grad.sign()
-        img_adv = torch.clamp(adv_images, min=0, max=1).detach()
-    print(total_loss.data)
+
+    all_losses = []
+    for model_name in model_names:
+        cos_loss = cal_target_loss(img_adv, target, model_name)
+        all_losses.append(cos_loss)
+    total_loss = torch.mean(torch.stack(all_losses))
+
+    total_loss.backward()
+
+    with torch.no_grad():
+        perturbation = eps * img_adv.grad.sign()
+        img_adv = img_before + perturbation
+
+        img_adv = torch.clamp(img_adv, min=0, max=1)
+
+
+    print(total_loss.item())  
+
     return img_adv
 
 
